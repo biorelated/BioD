@@ -4,7 +4,7 @@
     Copyright (C) 2018 Pjotr Prins <pjotr.prins@thebird.nl>
 */
 
-module bio.std.core.decompress;
+module bio.core.decompress;
 
 /**
    Streaming line reader which can be used for gzipped files. Note the
