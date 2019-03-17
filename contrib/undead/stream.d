@@ -1431,22 +1431,6 @@ class Stream : InputStream, OutputStream {
       throw new SeekException("Stream is not seekable");
   }
 
-  unittest { // unit test for Issue 3363
-    import std.stdio;
-    immutable fileName = contrib.undead.internal.file.deleteme ~ "-issue3363.txt";
-    auto w = std.stdio.File(fileName, "w");
-    scope (exit) std.file.remove(fileName);
-    w.write("one two three");
-    w.close();
-    auto r = std.stdio.File(fileName, "r");
-    const(char)[] constChar;
-    string str;
-    char[] chars;
-    r.readf("%s %s %s", &constChar, &str, &chars);
-    assert (constChar == "one", constChar);
-    assert (str == "two", str);
-    assert (chars == "three", chars);
-  }
 
   unittest { //unit tests for Issue 1668
     void tryFloatRoundtrip(float x, string fmt = "", string pad = "") {
@@ -2134,81 +2118,6 @@ class File: Stream {
   // OS-specific property, just in case somebody wants
   // to mess with underlying API
   HANDLE handle() { return hFile; }
-
-  // run a few tests
-  unittest {
-    File file = new File;
-    int i = 666;
-    auto stream_file = contrib.undead.internal.file.deleteme ~ "-stream.$$$";
-    file.create(stream_file);
-    // should be ok to write
-    assert(file.writeable);
-    file.writeLine("Testing stream.d:");
-    file.writeString("Hello, world!");
-    file.write(i);
-    // string#1 + string#2 + int should give exacly that
-    version (Windows)
-      assert(file.position == 19 + 13 + 4);
-    version (Posix)
-      assert(file.position == 18 + 13 + 4);
-    // we must be at the end of file
-    assert(file.eof);
-    file.close();
-    // no operations are allowed when file is closed
-    assert(!file.readable && !file.writeable && !file.seekable);
-    file.open(stream_file);
-    // should be ok to read
-    assert(file.readable);
-    assert(file.available == file.size);
-    char[] line = file.readLine();
-    char[] exp = "Testing stream.d:".dup;
-    assert(line[0] == 'T');
-    assert(line.length == exp.length);
-    assert(!std.algorithm.cmp(line, "Testing stream.d:"));
-    // jump over "Hello, "
-    file.seek(7, SeekPos.Current);
-    version (Windows)
-      assert(file.position == 19 + 7);
-    version (Posix)
-      assert(file.position == 18 + 7);
-    assert(!std.algorithm.cmp(file.readString(6), "world!"));
-    i = 0; file.read(i);
-    assert(i == 666);
-    // string#1 + string#2 + int should give exacly that
-    version (Windows)
-      assert(file.position == 19 + 13 + 4);
-    version (Posix)
-      assert(file.position == 18 + 13 + 4);
-    // we must be at the end of file
-    assert(file.eof);
-    file.close();
-    file.open(stream_file,FileMode.OutNew | FileMode.In);
-    file.writeLine("Testing stream.d:");
-    file.writeLine("Another line");
-    file.writeLine("");
-    file.writeLine("That was blank");
-    file.position = 0;
-    char[][] lines;
-    foreach(char[] line; file) {
-      lines ~= line.dup;
-    }
-    assert( lines.length == 4 );
-    assert( lines[0] == "Testing stream.d:");
-    assert( lines[1] == "Another line");
-    assert( lines[2] == "");
-    assert( lines[3] == "That was blank");
-    file.position = 0;
-    lines = new char[][4];
-    foreach(ulong n, char[] line; file) {
-      lines[cast(size_t)(n-1)] = line.dup;
-    }
-    assert( lines[0] == "Testing stream.d:");
-    assert( lines[1] == "Another line");
-    assert( lines[2] == "");
-    assert( lines[3] == "That was blank");
-    file.close();
-    std.file.remove(stream_file);
-  }
 }
 
 /***
@@ -2251,56 +2160,6 @@ class BufferedFile: BufferedStream {
     File sf = cast(File)s;
     sf.create(filename,mode);
     resetSource();
-  }
-
-  // run a few tests same as File
-  unittest {
-    BufferedFile file = new BufferedFile;
-    int i = 666;
-    auto stream_file = contrib.undead.internal.file.deleteme ~ "-stream.$$$";
-    file.create(stream_file);
-    // should be ok to write
-    assert(file.writeable);
-    file.writeLine("Testing stream.d:");
-    file.writeString("Hello, world!");
-    file.write(i);
-    // string#1 + string#2 + int should give exacly that
-    version (Windows)
-      assert(file.position == 19 + 13 + 4);
-    version (Posix)
-      assert(file.position == 18 + 13 + 4);
-    // we must be at the end of file
-    assert(file.eof);
-    long oldsize = cast(long)file.size;
-    file.close();
-    // no operations are allowed when file is closed
-    assert(!file.readable && !file.writeable && !file.seekable);
-    file.open(stream_file);
-    // should be ok to read
-    assert(file.readable);
-    // test getc/ungetc and size
-    char c1 = file.getc();
-    file.ungetc(c1);
-    assert( file.size == oldsize );
-    assert(!std.algorithm.cmp(file.readLine(), "Testing stream.d:"));
-    // jump over "Hello, "
-    file.seek(7, SeekPos.Current);
-    version (Windows)
-      assert(file.position == 19 + 7);
-    version (Posix)
-      assert(file.position == 18 + 7);
-    assert(!std.algorithm.cmp(file.readString(6), "world!"));
-    i = 0; file.read(i);
-    assert(i == 666);
-    // string#1 + string#2 + int should give exacly that
-    version (Windows)
-      assert(file.position == 19 + 13 + 4);
-    version (Posix)
-      assert(file.position == 18 + 13 + 4);
-    // we must be at the end of file
-    assert(file.eof);
-    file.close();
-    std.file.remove(stream_file);
   }
 
 }
@@ -2850,38 +2709,6 @@ class MmFileStream : TArrayStream!(MmFile) {
     }
   }
 }
-
-unittest {
-  auto test_file = contrib.undead.internal.file.deleteme ~ "-testing.txt";
-  MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,100,null);
-  MmFileStream m;
-  m = new MmFileStream (mf);
-  m.writeString ("Hello, world");
-  assert (m.position == 12);
-  assert (m.seekSet (0) == 0);
-  assert (m.seekCur (4) == 4);
-  assert (m.seekEnd (-8) == 92);
-  assert (m.size == 100);
-  assert (m.seekSet (4));
-  assert (m.readString (4) == "o, w");
-  m.writeString ("ie");
-  ubyte[] dd = m.data;
-  assert ((cast(char[]) dd)[0 .. 12] == "Hello, wield");
-  m.position = 12;
-  m.writeString ("Foo");
-  assert (m.position == 15);
-  m.writeString ("Foo foo foo foo foo foo foo");
-  assert (m.position == 42);
-  m.close();
-  mf = new MmFile(test_file);
-  m = new MmFileStream (mf);
-  assert (!m.writeable);
-  char[] str = m.readString(12);
-  assert (str == "Hello, wield");
-  m.close();
-  std.file.remove(test_file);
-}
-
 
 /***
  * This subclass slices off a portion of another stream, making seeking relative
