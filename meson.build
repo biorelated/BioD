@@ -9,15 +9,12 @@ project_soversion = '0'
 src_dir = include_directories('.')
 pkgc = import('pkgconfig')
 
-#
+
 # Dependencies
-#
-# undead_dep = dependency('undead', version : '>=1.0.6')
 zlib_dep = dependency('zlib')
 
-#
+
 # Sources
-#
 biod_src = [
     'bio/std/hts/bam/abstractreader.d',
     'bio/std/hts/bam/bai/bin.d',
@@ -98,9 +95,7 @@ biod_src = [
     'bio/std/hts/sff/readrange.d',
     'bio/std/hts/sff/utils/roundup.d',
     'bio/std/hts/sff/writer.d'
-]
 
-bio2_src = [
     'bio/std/experimental/hts/bam/header.d',
     'bio/std/experimental/hts/bam/reader.d',
     'bio/std/experimental/hts/bam/writer.d',
@@ -114,18 +109,13 @@ bio2_src = [
     'bio/std/experimental/hts/unpack.d'
 ]
 
-#
 # Includes
-#
 install_subdir('bio/', install_dir: 'include/d/bio/')
-# install_subdir('bio2/', install_dir: 'include/d/bio/')
 
-#
+
 # Library and pkg-config
-#
 biod_lib = library('biod',
         [biod_src],
-#        dependencies: [undead_dep, zlib_dep],
         install: true,
         version: meson.project_version(),
         soversion: project_soversion
@@ -134,17 +124,13 @@ pkgc.generate(name: 'biod',
               libraries: biod_lib,
               subdirs: 'd/bio/',
               version: meson.project_version(),
-              description: 'A library for computational biology and bioinformatic'
+              description: 'A library for computational biology and bioinformatics'
 )
 
-#
 # Tests
-#
 biod_test_exe = executable('biod_test',
     ['test/unittests.d',
      biod_src,
- #  bio2_src],
-  #  dependencies: [undead_dep, zlib_dep],
     d_unittest: true
 )
 test('biod_tests', biod_test_exe)
